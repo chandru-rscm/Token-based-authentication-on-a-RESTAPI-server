@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JWT Auth — Live Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080c10;
+    --surface: #0d1117;
+    --border: #1e2d3d;
+    --green: #00ff88;
+    --green-dim: #00ff8844;
+    --cyan: #00d4ff;
+    --red: #ff4466;
+    --yellow: #ffd700;
+    --text: #c9d1d9;
+    --muted: #4a5568;
+    --token-color: #ff9f43;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid scanline effect */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,255,136,0.015) 2px,
+      rgba(0,255,136,0.015) 4px
+    );
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 20px 40px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: linear-gradient(90deg, #0d1117, #0a1628);
+  }
+
+  .logo {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 900;
+    color: var(--green);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+  }
+
+  .logo span { color: var(--cyan); }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 var(--green-dim); }
+    50% { opacity: 0.6; box-shadow: 0 0 0 6px transparent; }
+  }
+
+  .server-url {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .server-url input {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--cyan);
+    font-family: inherit;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 3px;
+    width: 200px;
+    outline: none;
+  }
+
+  .server-url input:focus { border-color: var(--cyan); }
+
+  main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    height: calc(100vh - 65px);
+  }
+
+  /* LEFT PANEL */
+  .left-panel {
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .section-label {
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 20px;
+    transition: border-color 0.2s;
+  }
+
+  .card:hover { border-color: #2d3f50; }
+
+  .card-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .method-tag {
+    font-size: 9px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+
+  .method-post { background: #1a3a2a; color: var(--green); border: 1px solid #2a5a3a; }
+  .method-get  { background: #1a2a3a; color: var(--cyan);  border: 1px solid #2a4a5a; }
+
+  .path-label { color: var(--muted); font-size: 12px; }
+
+  .form-row { margin-bottom: 12px; }
+
+  label {
+    display: block;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+  }
+
+  input[type="text"],
+  input[type="password"] {
+    width: 100%;
+    background: #0a0e14;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input:focus { border-color: var(--green); }
+
+  .btn {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 4px;
+  }
+
+  .btn-green {
+    background: linear-gradient(135deg, #003d20, #006630);
+    color: var(--green);
+    border: 1px solid #00993a;
+  }
+
+  .btn-green:hover {
+    background: linear-gradient(135deg, #005530, #009940);
+    box-shadow: 0 0 20px var(--green-dim);
+  }
+
+  .btn-cyan {
+    background: linear-gradient(135deg, #001a2e, #003050);
+    color: var(--cyan);
+    border: 1px solid #0066aa;
+  }
+
+  .btn-cyan:hover {
+    background: linear-gradient(135deg, #002a4a, #004a6e);
+    box-shadow: 0 0 20px rgba(0,212,255,0.2);
+  }
+
+  .btn:active { transform: scale(0.98); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Token display */
+  .token-box {
+    background: #0a0e14;
+    border: 1px solid #2a1f00;
+    border-radius: 4px;
+    padding: 10px 12px;
+    font-size: 10px;
+    color: var(--token-color);
+    word-break: break-all;
+    line-height: 1.6;
+    min-height: 40px;
+    position: relative;
+  }
+
+  .token-box.has-token { border-color: #4a3500; }
+
+  .copy-btn {
+    position: absolute;
+    top: 6px; right: 6px;
+    background: #1a1200;
+    border: 1px solid #4a3500;
+    color: var(--yellow);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    cursor: pointer;
+    letter-spacing: 1px;
+  }
+
+  /* RIGHT PANEL — Terminal */
+  .right-panel {
+    display: flex;
+    flex-direction: column;
+    background: #050810;
+  }
+
+  .terminal-header {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #080c12;
+  }
+
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-r { background: #ff4466; }
+  .dot-y { background: #ffd700; }
+  .dot-g { background: var(--green); }
+
+  .terminal-title {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    margin-left: 8px;
+  }
+
+  .clear-btn {
+    margin-left: auto;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    padding: 3px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+
+  .clear-btn:hover { border-color: var(--red); color: var(--red); }
+
+  .terminal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    font-size: 12px;
+    line-height: 1.7;
+  }
+
+  .log-entry { margin-bottom: 16px; animation: fadeIn 0.3s ease; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .log-time { color: var(--muted); font-size: 10px; }
+  .log-req  { color: var(--cyan); }
+  .log-url  { color: #7a8fa8; }
+
+  .log-status-ok  { color: var(--green); font-weight: bold; }
+  .log-status-err { color: var(--red);   font-weight: bold; }
+  .log-status-warn{ color: var(--yellow);font-weight: bold; }
+
+  .log-body {
+    background: #0a0e14;
+    border-left: 2px solid var(--border);
+    padding: 8px 12px;
+    margin-top: 6px;
+    border-radius: 0 4px 4px 0;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .log-body.ok  { border-color: var(--green); }
+  .log-body.err { border-color: var(--red);   }
+
+  .flow-diagram {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 20px;
+    font-size: 11px;
+  }
+
+  .flow-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    color: var(--muted);
+  }
+
+  .flow-step.active { color: var(--text); }
+  .flow-step.done   { color: var(--green); }
+
+  .flow-icon { font-size: 14px; width: 20px; text-align: center; }
+
+  .empty-state {
+    color: var(--muted);
+    font-size: 11px;
+    text-align: center;
+    padding: 60px 20px;
+    line-height: 2;
+  }
+
+  .empty-state .arrow { color: var(--green); font-size: 20px; }
+
+  /* JWT anatomy */
+  .jwt-anatomy { font-size: 10px; line-height: 1.8; }
+  .jwt-header  { color: #ff6b9d; }
+  .jwt-payload { color: var(--token-color); }
+  .jwt-sig     { color: var(--cyan); }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="status-dot"></div>
+  <div class="logo">JWT <span>AUTH</span> DEMO</div>
+  <div style="font-size:10px;color:var(--muted);margin-left:8px;">— DCS Assignment | REST API</div>
+  <div class="server-url">
+    SERVER&nbsp;
+    <input type="text" id="baseUrl" value="http://localhost:8000" placeholder="http://SERVER_IP:8000">
+  </div>
+</header>
+
+<main>
+  <!-- LEFT: Controls -->
+  <div class="left-panel">
+
+    <div>
+      <div class="section-label">Authentication Flow</div>
+
+      <!-- REGISTER -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title">
+          <span class="method-tag method-post">POST</span>
+          <span class="path-label">/register</span>
+        </div>
+        <div class="form-row">
+          <label>USERNAME</label>
+          <input type="text" id="reg-user" placeholder="e.g. chandru" value="chandru">
+        </div>
+        <div class="form-row">
+          <label>PASSWORD</label>
+          <input type="password" id="reg-pass" placeholder="min 6 chars" value="secure123">
+        </div>
+        <button class="btn btn-green" onclick="doRegister()">REGISTER USER</button>
+      </div>
+
+      <!-- LOGIN -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title">
+          <span class="method-tag method-post">POST</span>
+          <span class="path-label">/login → returns JWT</span>
+        </div>
+        <div class="form-row">
+          <label>USERNAME</label>
+          <input type="text" id="login-user" placeholder="same as registered" value="chandru">
+        </div>
+        <div class="form-row">
+          <label>PASSWORD</label>
+          <input type="password" id="login-pass" placeholder="password" value="secure123">
+        </div>
+        <button class="btn btn-green" onclick="doLogin()">LOGIN & GET TOKEN</button>
+        <div style="margin-top:12px;">
+          <label>JWT TOKEN (auto-filled after login)</label>
+          <div class="token-box" id="token-display">
+            <span style="color:var(--muted)">— token appears here after login —</span>
+          </div>
+        </div>
+        <div style="margin-top:8px;" id="jwt-anatomy" class="jwt-anatomy" hidden></div>
+      </div>
+
+      <!-- PROTECTED -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title">
+          <span class="method-tag method-get">GET</span>
+          <span class="path-label">/protected</span>
+        </div>
+        <button class="btn btn-cyan" onclick="doProtected()">ACCESS WITH VALID TOKEN</button>
+        <button class="btn btn-cyan" style="margin-top:8px;opacity:0.6;" onclick="doProtectedBad()">ACCESS WITH FAKE TOKEN ⚡</button>
+        <button class="btn btn-cyan" style="margin-top:8px;opacity:0.6;" onclick="doProtectedNone()">ACCESS WITH NO TOKEN ⚡</button>
+      </div>
+
+      <!-- LIST USERS -->
+      <div class="card">
+        <div class="card-title">
+          <span class="method-tag method-get">GET</span>
+          <span class="path-label">/users &nbsp;(debug)</span>
+        </div>
+        <button class="btn btn-cyan" onclick="doListUsers()">LIST REGISTERED USERS</button>
+      </div>
+    </div>
+
+    <!-- Flow tracker -->
+    <div>
+      <div class="section-label">Demo Progress</div>
+      <div class="flow-diagram">
+        <div class="flow-step" id="step-register">
+          <span class="flow-icon">○</span> Step 1 — Register user
+        </div>
+        <div class="flow-step" id="step-login">
+          <span class="flow-icon">○</span> Step 2 — Login, receive JWT
+        </div>
+        <div class="flow-step" id="step-protected">
+          <span class="flow-icon">○</span> Step 3 — Access protected route
+        </div>
+        <div class="flow-step" id="step-attack">
+          <span class="flow-icon">○</span> Step 4 — Demonstrate invalid token rejection
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT: Terminal -->
+  <div class="right-panel">
+    <div class="terminal-header">
+      <div class="dot dot-r"></div>
+      <div class="dot dot-y"></div>
+      <div class="dot dot-g"></div>
+      <span class="terminal-title">API RESPONSE LOG</span>
+      <button class="clear-btn" onclick="clearLog()">CLEAR</button>
+    </div>
+    <div class="terminal-body" id="terminal">
+      <div class="empty-state">
+        <div class="arrow">↑</div>
+        <div>Use the controls on the left</div>
+        <div>API responses will appear here</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+  let jwtToken = '';
+
+  function getBase() {
+    return document.getElementById('baseUrl').value.replace(/\/$/, '');
+  }
+
+  function now() {
+    return new Date().toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  }
+
+  function log(method, path, status, body, isOk) {
+    const t = document.getElementById('terminal');
+    const empty = t.querySelector('.empty-state');
+    if (empty) empty.remove();
+
+    const statusClass = isOk ? 'log-status-ok' : (status >= 400 ? 'log-status-err' : 'log-status-warn');
+    const bodyClass   = isOk ? 'ok' : 'err';
+
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.innerHTML = `
+      <div>
+        <span class="log-time">[${now()}]</span>
+        <span class="log-req"> ${method}</span>
+        <span class="log-url"> ${getBase()}${path}</span>
+        <span class="${statusClass}"> → ${status}</span>
+      </div>
+      <pre class="log-body ${bodyClass}">${JSON.stringify(body, null, 2)}</pre>
+    `;
+    t.appendChild(entry);
+    t.scrollTop = t.scrollHeight;
+  }
+
+  function setStep(id) {
+    document.getElementById(id).className = 'flow-step done';
+    document.getElementById(id).querySelector('.flow-icon').textContent = '✓';
+  }
+
+  async function apiCall(method, path, body = null, token = null) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const opts = { method, headers };
+    if (body) opts.body = JSON.stringify(body);
+    try {
+      const res = await fetch(getBase() + path, opts);
+      const data = await res.json();
+      log(method, path, res.status, data, res.ok);
+      return { data, ok: res.ok, status: res.status };
+    } catch (e) {
+      log(method, path, 'ERR', { error: e.message, hint: 'Is the server running? Check the URL above.' }, false);
+      return { data: null, ok: false };
+    }
+  }
+
+  async function doRegister() {
+    const u = document.getElementById('reg-user').value;
+    const p = document.getElementById('reg-pass').value;
+    const r = await apiCall('POST', '/register', { username: u, password: p });
+    if (r.ok) setStep('step-register');
+  }
+
+  async function doLogin() {
+    const u = document.getElementById('login-user').value;
+    const p = document.getElementById('login-pass').value;
+    const r = await apiCall('POST', '/login', { username: u, password: p });
+    if (r.ok && r.data.access_token) {
+      jwtToken = r.data.access_token;
+      const box = document.getElementById('token-display');
+      box.className = 'token-box has-token';
+      box.innerHTML = `<button class="copy-btn" onclick="navigator.clipboard.writeText('${jwtToken}')">COPY</button>${jwtToken}`;
+      showJwtAnatomy(jwtToken);
+      setStep('step-login');
+    }
+  }
+
+  function showJwtAnatomy(token) {
+    const parts = token.split('.');
+    const el = document.getElementById('jwt-anatomy');
+    el.hidden = false;
+    el.innerHTML = `
+      <div style="margin-top:10px;font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:6px;">JWT ANATOMY</div>
+      <span class="jwt-header">[HEADER: ${parts[0].substring(0,16)}…]</span>
+      <span style="color:var(--muted)">.</span>
+      <span class="jwt-payload">[PAYLOAD: ${parts[1].substring(0,16)}…]</span>
+      <span style="color:var(--muted)">.</span>
+      <span class="jwt-sig">[SIGNATURE: ${parts[2].substring(0,16)}…]</span>
+    `;
+  }
+
+  async function doProtected() {
+    const r = await apiCall('GET', '/protected', null, jwtToken || 'NO_TOKEN');
+    if (r.ok) setStep('step-protected');
+  }
+
+  async function doProtectedBad() {
+    await apiCall('GET', '/protected', null, 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.ZmFrZQ.fake_signature');
+    setStep('step-attack');
+  }
+
+  async function doProtectedNone() {
+    const headers = { 'Content-Type': 'application/json' };
+    try {
+      const res = await fetch(getBase() + '/protected', { headers });
+      const data = await res.json();
+      log('GET', '/protected', res.status, data, false);
+    } catch (e) {
+      log('GET', '/protected', 'ERR', { error: e.message }, false);
+    }
+    setStep('step-attack');
+  }
+
+  async function doListUsers() {
+    await apiCall('GET', '/users');
+  }
+
+  function clearLog() {
+    document.getElementById('terminal').innerHTML = `
+      <div class="empty-state">
+        <div class="arrow">↑</div>
+        <div>Log cleared</div>
+      </div>`;
+  }
+</script>
+</body>
+</html>
