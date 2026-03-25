@@ -4,7 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+import bcrypt
+
 from typing import Optional
 import uvicorn
 
@@ -25,7 +26,7 @@ app.add_middleware(
 )
 
 # ─── HELPERS ──────────────────────────────────────────────────────────────────
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 bearer_scheme = HTTPBearer()
 
 # Fake in-memory DB (no actual DB needed for demo)
@@ -33,11 +34,10 @@ fake_users_db: dict = {}
 
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
-
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    return bcrypt.checkpw(plain.encode(), hashed.encode())
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
