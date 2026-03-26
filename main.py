@@ -19,12 +19,11 @@ app = FastAPI(title="JWT Auth REST API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # Allow all origins for demo (laptop-to-laptop)
-    allow_credentials=True,
+    allow_origins=["*", "http://127.0.0.1:5500", "http://localhost:5500", "null"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 # ─── HELPERS ──────────────────────────────────────────────────────────────────
 
 bearer_scheme = HTTPBearer()
